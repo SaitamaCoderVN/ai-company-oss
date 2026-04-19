@@ -1,0 +1,31 @@
+{
+  "name": "ai-agent-telegram-router",
+  "version": "1.0.0",
+  "description": "Telegram Message Router for AI Agent Company",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "stop": "node -e \"process.exit(0)\""
+  },
+  "keywords": [
+    "telegram",
+    "router",
+    "agent",
+    "orchestration"
+  ],
+  "author": "AI Agent Company",
+  "license": "MIT",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.61.0",
+    "dotenv": "^16.3.1",
+    "chokidar": "^3.5.3",
+    "ws": "^8.14.2",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

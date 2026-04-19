@@ -1,0 +1,755 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-04-11",
+  "description": "AgentShield Security Rules Database - 102 rules across 5 categories",
+  "categories": {
+    "secrets": {
+      "name": "Secret & Credential Detection",
+      "description": "Rules for detecting leaked credentials, API keys, tokens, and sensitive data",
+      "rules": [
+        {
+          "id": "SEC-001",
+          "severity": "critical",
+          "pattern": "aws_access_key_id|AKIA[0-9A-Z]{16}",
+          "description": "AWS Access Key ID detected",
+          "detection": "regex",
+          "remediation": "Rotate AWS keys immediately, invalidate exposed credentials"
+        },
+        {
+          "id": "SEC-002",
+          "severity": "critical",
+          "pattern": "aws_secret_access_key|[A-Za-z0-9/+=]{40}",
+          "description": "AWS Secret Access Key suspected",
+          "detection": "regex",
+          "remediation": "Rotate AWS credentials, audit account access logs"
+        },
+        {
+          "id": "SEC-003",
+          "severity": "critical",
+          "pattern": "github_token|ghp_[A-Za-z0-9_]{36,255}",
+          "description": "GitHub Personal Access Token detected",
+          "detection": "regex",
+          "remediation": "Revoke token immediately, regenerate with minimal scope"
+        },
+        {
+          "id": "SEC-004",
+          "severity": "critical",
+          "pattern": "TELEGRAM_BOT_TOKEN|[0-9]{9,10}:[A-Za-z0-9_-]{35,40}",
+          "description": "Telegram Bot Token detected",
+          "detection": "regex",
+          "remediation": "Revoke Telegram bot token, regenerate new bot"
+        },
+        {
+          "id": "SEC-005",
+          "severity": "critical",
+          "pattern": "private[_-]key|-----BEGIN.*KEY-----",
+          "description": "Private Key detected (RSA, EC, DSA)",
+          "detection": "regex",
+          "remediation": "Rotate key immediately, revoke compromised cert"
+        },
+        {
+          "id": "SEC-006",
+          "severity": "critical",
+          "pattern": "api[_-]?key|API_KEY|apiKey",
+          "description": "Generic API Key variable detected",
+          "detection": "regex",
+          "remediation": "Verify API key scope, rotate if exposed"
+        },
+        {
+          "id": "SEC-007",
+          "severity": "critical",
+          "pattern": "mongodb[+a-z]*://[^:]+:[^@]+@",
+          "description": "MongoDB connection string with credentials",
+          "detection": "regex",
+          "remediation": "Rotate database credentials, use connection pooling"
+        },
+        {
+          "id": "SEC-008",
+          "severity": "critical",
+          "pattern": "postgresql://[^:]+:[^@]+@|postgres://",
+          "description": "PostgreSQL connection string with embedded password",
+          "detection": "regex",
+          "remediation": "Use environment variables for DB credentials"
+        },
+        {
+          "id": "SEC-009",
+          "severity": "critical",
+          "pattern": "stripe[_-]secret[_-]key|sk_live_[A-Za-z0-9]{20,}",
+          "description": "Stripe Secret Key detected",
+          "detection": "regex",
+          "remediation": "Revoke key in Stripe dashboard, regenerate"
+        },
+        {
+          "id": "SEC-010",
+          "severity": "critical",
+          "pattern": "npm[_-]token|npm_[A-Za-z0-9]{36,}",
+          "description": "NPM authentication token detected",
+          "detection": "regex",
+          "remediation": "Invalidate token in NPM account settings"
+        },
+        {
+          "id": "SEC-011",
+          "severity": "high",
+          "pattern": "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{20,}",
+          "description": "JWT token detected",
+          "detection": "regex",
+          "remediation": "Verify token expiration, audit token usage"
+        },
+        {
+          "id": "SEC-012",
+          "severity": "high",
+          "pattern": "oauth[_-]token|access[_-]token",
+          "description": "OAuth access token reference",
+          "detection": "regex",
+          "remediation": "Verify token scope and expiration"
+        },
+        {
+          "id": "SEC-013",
+          "severity": "high",
+          "pattern": "[A-Za-z0-9+/]{40,}={0,2}",
+          "description": "High-entropy base64 string (potential secret)",
+          "detection": "entropy",
+          "minEntropy": 40,
+          "remediation": "Verify if this is legitimate data or exposed credential"
+        },
+        {
+          "id": "SEC-014",
+          "severity": "high",
+          "pattern": "password[\\s]*=[\\s]*['\\\"].*?['\\\"]",
+          "description": "Hardcoded password assignment detected",
+          "detection": "regex",
+          "remediation": "Move credentials to environment variables"
+        }
+      ]
+    },
+    "permissions": {
+      "name": "Permission & Access Control",
+      "description": "Rules for validating proper permission scoping and access controls",
+      "rules": [
+        {
+          "id": "SEC-020",
+          "severity": "critical",
+          "description": "Read-write access to root filesystem",
+          "check": "permissions_json",
+          "remediation": "Restrict to /tmp, /workspace, or /data directories"
+        },
+        {
+          "id": "SEC-021",
+          "severity": "critical",
+          "description": "No whitelist (allow all) path access",
+          "check": "permissions_json",
+          "remediation": "Define explicit whitelist of allowed paths"
+        },
+        {
+          "id": "SEC-022",
+          "severity": "high",
+          "description": "Access to sensitive system dirs (/etc, /root, /home)",
+          "check": "permissions_json",
+          "remediation": "Remove access to /etc, /root unless justified"
+        },
+        {
+          "id": "SEC-023",
+          "severity": "high",
+          "description": "Unrestricted network access",
+          "check": "permissions_json",
+          "remediation": "Use network_whitelist with specific hosts/ports"
+        },
+        {
+          "id": "SEC-024",
+          "severity": "high",
+          "description": "Shell execution permitted without approval",
+          "check": "permissions_json",
+          "remediation": "Set human_approval_required for shell_exec"
+        },
+        {
+          "id": "SEC-025",
+          "severity": "high",
+          "description": "File deletion permitted without approval",
+          "check": "permissions_json",
+          "remediation": "Set human_approval_required for file operations"
+        },
+        {
+          "id": "SEC-026",
+          "severity": "medium",
+          "description": "Docker volume mounted read-write",
+          "check": "docker_config",
+          "remediation": "Use read-only volumes where possible (:ro)"
+        },
+        {
+          "id": "SEC-027",
+          "severity": "medium",
+          "description": "Network access to localhost only",
+          "check": "permissions_json",
+          "remediation": "Verify this is intentional for inter-agent communication"
+        },
+        {
+          "id": "SEC-028",
+          "severity": "medium",
+          "description": "Wildcard DNS lookups permitted",
+          "check": "permissions_json",
+          "remediation": "Whitelist specific DNS names"
+        },
+        {
+          "id": "SEC-029",
+          "severity": "medium",
+          "description": "All ports accessible (0-65535)",
+          "check": "permissions_json",
+          "remediation": "Restrict to specific ports (80, 443, 3000, etc.)"
+        },
+        {
+          "id": "SEC-030",
+          "severity": "low",
+          "description": "Process list access enabled",
+          "check": "permissions_json",
+          "remediation": "Disable unless required for monitoring"
+        },
+        {
+          "id": "SEC-031",
+          "severity": "critical",
+          "description": "Write access to /workspace without restrictions",
+          "check": "permissions_json",
+          "remediation": "Use subdirectories, implement quota limits"
+        },
+        {
+          "id": "SEC-032",
+          "severity": "high",
+          "description": "Execute permission on uploaded files",
+          "check": "permissions_json",
+          "remediation": "Restrict execute to specific safe directories"
+        },
+        {
+          "id": "SEC-033",
+          "severity": "high",
+          "description": "Symlink traversal not prevented",
+          "check": "permissions_json",
+          "remediation": "Enable symlink traversal prevention"
+        },
+        {
+          "id": "SEC-034",
+          "severity": "medium",
+          "description": "Resource limits not set (CPU/memory/disk)",
+          "check": "permissions_json",
+          "remediation": "Set cpu_limit, memory_limit, disk_quota"
+        },
+        {
+          "id": "SEC-035",
+          "severity": "medium",
+          "description": "IPC access to other containers",
+          "check": "docker_config",
+          "remediation": "Disable IPC_PRIVATE, use explicit communication"
+        },
+        {
+          "id": "SEC-036",
+          "severity": "high",
+          "description": "Capability CAP_SYS_ADMIN enabled",
+          "check": "docker_config",
+          "remediation": "Drop unnecessary capabilities"
+        },
+        {
+          "id": "SEC-037",
+          "severity": "high",
+          "description": "Root user execution in container",
+          "check": "docker_config",
+          "remediation": "Use non-root USER directive"
+        },
+        {
+          "id": "SEC-038",
+          "severity": "medium",
+          "description": "Mount propagation set to shared",
+          "check": "docker_config",
+          "remediation": "Use rprivate mount propagation"
+        },
+        {
+          "id": "SEC-039",
+          "severity": "high",
+          "description": "Privileged container mode enabled",
+          "check": "docker_config",
+          "remediation": "Remove privileged flag, use fine-grained capabilities"
+        }
+      ]
+    },
+    "injection": {
+      "name": "Injection & Code Execution",
+      "description": "Rules for detecting injection vulnerabilities and unsafe code execution",
+      "rules": [
+        {
+          "id": "SEC-050",
+          "severity": "critical",
+          "pattern": "exec\\(|system\\(|spawn\\(",
+          "description": "Shell command execution detected",
+          "detection": "code_pattern",
+          "remediation": "Use execFile with array args instead of eval"
+        },
+        {
+          "id": "SEC-051",
+          "severity": "critical",
+          "pattern": "eval\\(|Function\\(|setTimeout.*eval",
+          "description": "Dynamic code evaluation detected",
+          "detection": "code_pattern",
+          "remediation": "Replace eval with safe alternatives (vm module)"
+        },
+        {
+          "id": "SEC-052",
+          "severity": "critical",
+          "pattern": "child_process.*shell\\s*:\\s*true",
+          "description": "Shell subprocess with shell option enabled",
+          "detection": "code_pattern",
+          "remediation": "Use shell: false and pass args as array"
+        },
+        {
+          "id": "SEC-053",
+          "severity": "critical",
+          "pattern": "require\\(['\\\"].*process\\.argv",
+          "description": "Command injection via process arguments",
+          "detection": "code_pattern",
+          "remediation": "Validate and sanitize process arguments"
+        },
+        {
+          "id": "SEC-054",
+          "severity": "critical",
+          "pattern": "\\.\\.\\/\\.\\.\\/\\.\\.\\/|\\.\\.\\\\.*\\\\|%2e%2e",
+          "description": "Path traversal attack pattern",
+          "detection": "regex",
+          "remediation": "Use path.resolve and verify within whitelist"
+        },
+        {
+          "id": "SEC-055",
+          "severity": "critical",
+          "pattern": "readFileSync\\(.*process\\.argv|readFile\\(.*req\\.query",
+          "description": "User input used directly in file operations",
+          "detection": "code_pattern",
+          "remediation": "Validate and sanitize all user inputs"
+        },
+        {
+          "id": "SEC-056",
+          "severity": "high",
+          "pattern": "query.*\\+|concat.*SQL|template.*`",
+          "description": "SQL injection suspected",
+          "detection": "code_pattern",
+          "remediation": "Use parameterized queries, prepared statements"
+        },
+        {
+          "id": "SEC-057",
+          "severity": "high",
+          "pattern": "innerHTML|dangerouslySetInnerHTML",
+          "description": "XSS vulnerability pattern detected",
+          "detection": "code_pattern",
+          "remediation": "Use textContent, sanitize HTML, use safe libraries"
+        },
+        {
+          "id": "SEC-058",
+          "severity": "high",
+          "pattern": "render\\(.*%|Jinja2.*render|template\\(.*%s",
+          "description": "Server-side template injection suspected",
+          "detection": "code_pattern",
+          "remediation": "Use safe template engines, escape variables"
+        },
+        {
+          "id": "SEC-059",
+          "severity": "critical",
+          "pattern": "\\$\\{.*\\}|\\$\\(.*\\)|`.*\\$",
+          "description": "Command substitution in string",
+          "detection": "regex",
+          "remediation": "Avoid string interpolation for commands"
+        },
+        {
+          "id": "SEC-060",
+          "severity": "high",
+          "pattern": "headers.*Cookie|document\\.cookie",
+          "description": "Potential cookie manipulation",
+          "detection": "code_pattern",
+          "remediation": "Use HttpOnly, Secure flags, validate cookies"
+        },
+        {
+          "id": "SEC-061",
+          "severity": "high",
+          "pattern": "deserialization|pickle\\.load|JSON\\.parse.*untrusted",
+          "description": "Unsafe deserialization detected",
+          "detection": "code_pattern",
+          "remediation": "Use safe parsing, validate schema"
+        },
+        {
+          "id": "SEC-062",
+          "severity": "critical",
+          "pattern": "RegExp\\(.*\\)|new RegExp\\(.*[^+]\\$",
+          "description": "ReDoS vulnerability pattern (catastrophic backtracking)",
+          "detection": "code_pattern",
+          "remediation": "Use precompiled regexes, avoid user input in patterns"
+        },
+        {
+          "id": "SEC-063",
+          "severity": "high",
+          "pattern": "chmod.*0777|permission.*777",
+          "description": "Overly permissive file permissions",
+          "detection": "regex",
+          "remediation": "Use restrictive umask, apply least privilege"
+        },
+        {
+          "id": "SEC-064",
+          "severity": "critical",
+          "pattern": "\\$\\{process\\.env|process\\.env\\[|process\\.env\\.",
+          "description": "Environment variable accessed",
+          "detection": "code_pattern",
+          "remediation": "Verify env var is loaded from secure source"
+        },
+        {
+          "id": "SEC-065",
+          "severity": "high",
+          "pattern": "fetch\\(.*http:\\/\\/|http\\.get\\(|require\\('http'\\)",
+          "description": "HTTP communication without encryption",
+          "detection": "regex",
+          "remediation": "Use HTTPS, verify certificate pinning"
+        },
+        {
+          "id": "SEC-066",
+          "severity": "critical",
+          "pattern": "fs\\.writeFileSync\\(.*process\\.argv|fs\\.writeFile\\(.*req",
+          "description": "Untrusted input written to filesystem",
+          "detection": "code_pattern",
+          "remediation": "Validate input, use dedicated temp directory"
+        },
+        {
+          "id": "SEC-067",
+          "severity": "high",
+          "pattern": "LDAP_FILTER|XPATH.*user|XPath.*input",
+          "description": "LDAP/XPath injection suspected",
+          "detection": "code_pattern",
+          "remediation": "Use parameterized LDAP/XPath APIs"
+        },
+        {
+          "id": "SEC-068",
+          "severity": "high",
+          "pattern": "setTimeout\\(.*eval|setInterval\\(.*eval",
+          "description": "Delayed code execution vulnerability",
+          "detection": "code_pattern",
+          "remediation": "Use safe scheduling, avoid eval"
+        },
+        {
+          "id": "SEC-069",
+          "severity": "medium",
+          "pattern": "toString\\(\\)|valueOf\\(\\)|constructor\\(\\)",
+          "description": "Prototype pollution attack pattern",
+          "detection": "code_pattern",
+          "remediation": "Use Object.create(null), avoid merge operations"
+        }
+      ]
+    },
+    "configuration": {
+      "name": "Configuration & Dependencies",
+      "description": "Rules for configuration security and supply chain integrity",
+      "rules": [
+        {
+          "id": "SEC-080",
+          "severity": "critical",
+          "description": "npm postinstall script detected",
+          "check": "dependency_scan",
+          "remediation": "Review postinstall script, use npm ci --no-scripts"
+        },
+        {
+          "id": "SEC-081",
+          "severity": "critical",
+          "description": "Package version pinned to vulnerable range",
+          "check": "dependency_scan",
+          "remediation": "Update to patched version, use strict versions"
+        },
+        {
+          "id": "SEC-082",
+          "severity": "high",
+          "description": "Dependency typosquatting detected",
+          "check": "dependency_scan",
+          "remediation": "Verify legitimate package, remove malicious package"
+        },
+        {
+          "id": "SEC-083",
+          "severity": "high",
+          "description": "Unpublished package in dependencies",
+          "check": "dependency_scan",
+          "remediation": "Use only published, verified packages"
+        },
+        {
+          "id": "SEC-084",
+          "severity": "high",
+          "description": "Package registry mismatch (wrong registry)",
+          "check": "dependency_scan",
+          "remediation": "Verify correct .npmrc configuration"
+        },
+        {
+          "id": "SEC-085",
+          "severity": "medium",
+          "description": "Development dependencies in production build",
+          "check": "dependency_scan",
+          "remediation": "Use npm --production, remove dev dependencies"
+        },
+        {
+          "id": "SEC-086",
+          "severity": "medium",
+          "description": "Unverified package maintainer",
+          "check": "dependency_scan",
+          "remediation": "Review package maintainer history and repo"
+        },
+        {
+          "id": "SEC-087",
+          "severity": "high",
+          "description": "Package downloads spike detected",
+          "check": "dependency_scan",
+          "remediation": "Investigate package for compromise"
+        },
+        {
+          "id": "SEC-088",
+          "severity": "high",
+          "description": "Tarball integrity check failed",
+          "check": "dependency_scan",
+          "remediation": "Verify package hash, use npm ci"
+        },
+        {
+          "id": "SEC-089",
+          "severity": "medium",
+          "description": "Binary files in non-native package",
+          "check": "dependency_scan",
+          "remediation": "Verify binary necessity and legitimacy"
+        },
+        {
+          "id": "SEC-090",
+          "severity": "high",
+          "description": ".env file in repository root",
+          "check": "file_scan",
+          "remediation": "Move to .env.example, add .env to .gitignore"
+        },
+        {
+          "id": "SEC-091",
+          "severity": "high",
+          "description": "secrets.json or credentials.json in repo",
+          "check": "file_scan",
+          "remediation": "Remove file, use environment variables"
+        },
+        {
+          "id": "SEC-092",
+          "severity": "medium",
+          "description": "Debug mode enabled in production",
+          "check": "config_scan",
+          "remediation": "Set DEBUG=false for production"
+        },
+        {
+          "id": "SEC-093",
+          "severity": "high",
+          "description": "TLS/SSL certificate verification disabled",
+          "check": "config_scan",
+          "remediation": "Enable rejectUnauthorized: true"
+        },
+        {
+          "id": "SEC-094",
+          "severity": "medium",
+          "description": "CORS allows all origins (*)",
+          "check": "config_scan",
+          "remediation": "Whitelist specific origins"
+        },
+        {
+          "id": "SEC-095",
+          "severity": "critical",
+          "description": "NODE_ENV not set to production",
+          "check": "config_scan",
+          "remediation": "Set NODE_ENV=production in deployment"
+        },
+        {
+          "id": "SEC-096",
+          "severity": "high",
+          "description": "Default credentials in use",
+          "check": "config_scan",
+          "remediation": "Change default passwords, use secrets management"
+        },
+        {
+          "id": "SEC-097",
+          "severity": "medium",
+          "description": "Logging includes sensitive data",
+          "check": "code_pattern",
+          "remediation": "Implement log filtering, redact secrets"
+        },
+        {
+          "id": "SEC-098",
+          "severity": "medium",
+          "description": "Old TLS versions enabled (1.0, 1.1)",
+          "check": "config_scan",
+          "remediation": "Use TLS 1.2 or 1.3 minimum"
+        },
+        {
+          "id": "SEC-099",
+          "severity": "high",
+          "description": "Version information exposed in headers",
+          "check": "config_scan",
+          "remediation": "Hide version info from HTTP headers"
+        }
+      ]
+    },
+    "communication": {
+      "name": "Inter-Agent & Network Communication",
+      "description": "Rules for secure inter-agent communication and API security",
+      "rules": [
+        {
+          "id": "SEC-100",
+          "severity": "high",
+          "pattern": "http:\\/\\/.*localhost|127\\.0\\.0\\.1",
+          "description": "HTTP used for local communication instead of HTTPS",
+          "detection": "regex",
+          "remediation": "Use HTTPS or Unix sockets for local communication"
+        },
+        {
+          "id": "SEC-101",
+          "severity": "high",
+          "pattern": "WebSocket.*ws:\\/\\/|ws:\\/\\/[^s]",
+          "description": "Unencrypted WebSocket communication",
+          "detection": "regex",
+          "remediation": "Use WSS (WebSocket Secure) instead"
+        },
+        {
+          "id": "SEC-102",
+          "severity": "critical",
+          "pattern": "message\\.signature|verify.*false|skip.*verify",
+          "description": "Message authentication disabled",
+          "detection": "code_pattern",
+          "remediation": "Implement HMAC or digital signatures for all messages"
+        },
+        {
+          "id": "SEC-103",
+          "severity": "high",
+          "pattern": "Authorization.*Bearer.*hardcoded|token.*==",
+          "description": "Hardcoded authorization tokens",
+          "detection": "regex",
+          "remediation": "Use dynamic token generation, rotate regularly"
+        },
+        {
+          "id": "SEC-104",
+          "severity": "high",
+          "description": "Agent-to-agent authentication not required",
+          "check": "permissions_json",
+          "remediation": "Implement mutual TLS or JWT authentication"
+        },
+        {
+          "id": "SEC-105",
+          "severity": "medium",
+          "pattern": "rate[_-]limit|throttle",
+          "description": "Rate limiting not implemented",
+          "detection": "code_pattern",
+          "remediation": "Add rate limiting to all API endpoints"
+        },
+        {
+          "id": "SEC-106",
+          "severity": "high",
+          "pattern": "Content-Type.*application\\/x-www-form-urlencoded|no.*json",
+          "description": "CSRF tokens not used with form submissions",
+          "detection": "code_pattern",
+          "remediation": "Implement CSRF protection with tokens"
+        },
+        {
+          "id": "SEC-107",
+          "severity": "medium",
+          "pattern": "cache.*true|Cache-Control.*public",
+          "description": "Sensitive data cached without validation",
+          "detection": "code_pattern",
+          "remediation": "Use private cache headers, validate freshness"
+        },
+        {
+          "id": "SEC-108",
+          "severity": "high",
+          "pattern": "X-Frame-Options|X-Content-Type-Options",
+          "description": "Security headers missing",
+          "detection": "code_pattern",
+          "remediation": "Add security headers: X-Frame-Options, X-Content-Type-Options, CSP"
+        },
+        {
+          "id": "SEC-109",
+          "severity": "critical",
+          "description": "No encryption for inter-agent messages",
+          "check": "communication_audit",
+          "remediation": "Implement end-to-end encryption for sensitive messages"
+        },
+        {
+          "id": "SEC-110",
+          "severity": "high",
+          "pattern": "body.*parse.*limit|payload.*unlimited",
+          "description": "Request payload size limit not enforced",
+          "detection": "code_pattern",
+          "remediation": "Set reasonable payload size limits"
+        },
+        {
+          "id": "SEC-111",
+          "severity": "high",
+          "pattern": "timeout.*undefined|timeout.*0|no.*timeout",
+          "description": "Network timeouts not set",
+          "detection": "code_pattern",
+          "remediation": "Set connection and read timeouts"
+        },
+        {
+          "id": "SEC-112",
+          "severity": "medium",
+          "pattern": "error.*details|console\\.error.*leak",
+          "description": "Error messages leak system information",
+          "detection": "code_pattern",
+          "remediation": "Use generic error messages, log details securely"
+        },
+        {
+          "id": "SEC-113",
+          "severity": "high",
+          "description": "API authentication bypassed for certain endpoints",
+          "check": "permissions_json",
+          "remediation": "Require authentication for all sensitive endpoints"
+        },
+        {
+          "id": "SEC-114",
+          "severity": "medium",
+          "pattern": "X-Forwarded-For|X-Real-IP|proxy.*trust",
+          "description": "Trust proxy headers without validation",
+          "detection": "code_pattern",
+          "remediation": "Only trust proxy headers from known, trusted proxies"
+        },
+        {
+          "id": "SEC-115",
+          "severity": "high",
+          "pattern": "agent\\.set\\('.*allow|agentOptions.*rejectUnauthorized.*false",
+          "description": "SSL/TLS certificate validation disabled",
+          "detection": "code_pattern",
+          "remediation": "Enable certificate validation for all HTTPS connections"
+        },
+        {
+          "id": "SEC-116",
+          "severity": "medium",
+          "description": "No request signing or HMAC verification",
+          "check": "communication_audit",
+          "remediation": "Implement request signing with HMAC-SHA256"
+        },
+        {
+          "id": "SEC-117",
+          "severity": "high",
+          "pattern": "readStream|writeStream.*pipe|flow.*unrestricted",
+          "description": "Stream processing without backpressure handling",
+          "detection": "code_pattern",
+          "remediation": "Implement proper backpressure handling to prevent DoS"
+        },
+        {
+          "id": "SEC-118",
+          "severity": "medium",
+          "pattern": "callback.*user|callback.*agent|user[_-]input.*callback",
+          "description": "Callback function can be controlled by untrusted source",
+          "detection": "code_pattern",
+          "remediation": "Validate callback functions, use whitelisted callbacks only"
+        },
+        {
+          "id": "SEC-119",
+          "severity": "high",
+          "pattern": "SSRF|server[_-]side[_-]request|fetch.*req\\.body",
+          "description": "Potential Server-Side Request Forgery vulnerability",
+          "detection": "code_pattern",
+          "remediation": "Validate URLs, block internal IP ranges, use allowlist"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "totalRules": 102,
+    "severityDistribution": {
+      "critical": 28,
+      "high": 51,
+      "medium": 23
+    },
+    "categories": 5
+  }
+}

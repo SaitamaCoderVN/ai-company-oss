@@ -1,0 +1,72 @@
+# AI Agent Company — Docker Compose
+#
+# Start:     docker compose up -d
+# Stop:      docker compose down
+# SSH:       ssh root@localhost -p 2222 (password: aicompany)
+# Logs:      docker compose logs -f
+# Dashboard: http://localhost:9800
+
+services:
+  ai-company:
+    build: .
+    container_name: ai-company
+    hostname: ai-company
+    restart: unless-stopped
+
+    ports:
+      - "2222:22"          # SSH (login Claude, debug)
+      - "9800:9800"        # Dashboard HTTP
+      - "9803:9803"        # Dashboard WebSocket
+
+    env_file:
+      - .env
+    environment:
+      - DOCKER_MODE=false
+      - AI_COMPANY_DIR=/app
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - NODE_ENV=production
+
+    volumes:
+      # Claude auth (persists across restarts)
+      - ~/.claude:/root/.claude
+      - ~/.claude.json:/root/.claude.json
+
+      # Persistent data
+      - company-tasks:/data/tasks
+      - company-memory:/data/memory
+      - company-knowledge:/data/knowledge
+      - company-skills-queue:/data/skill-queue
+      - company-skills-store:/data/skill-store
+      - company-reports:/data/reports
+      - company-workspace:/workspace
+      - company-skills:/data/skills
+
+      # Mount local skills & config (read-only)
+      - ./skills:/app/skills-host:ro
+      - ./config:/app/config:ro
+
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '4'
+        reservations:
+          memory: 1G
+          cpus: '1'
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+volumes:
+  company-tasks:
+  company-memory:
+  company-knowledge:
+  company-skills-queue:
+  company-skills-store:
+  company-reports:
+  company-skills:
+  company-workspace:

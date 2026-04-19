@@ -1,0 +1,29 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+dist/
+build/
+
+# Task and skill files (generated)
+../tasks/
+../skill-queue/
+../skill-store/
+../agent-status.json

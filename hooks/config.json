@@ -1,0 +1,428 @@
+{
+  "version": "2.0",
+  "description": "AI Agent Company Hook Configuration with Profiles and Cost Tracking",
+  "globalTimeout": 5000,
+  "profiles": {
+    "minimal": {
+      "description": "Minimal overhead - only critical security hooks",
+      "enabledHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "security-secret-detection"
+      ]
+    },
+    "standard": {
+      "description": "Standard profile - security + quality checks (recommended)",
+      "enabledHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "security-secret-detection",
+        "security-pre-commit-secrets",
+        "security-large-files",
+        "quality-auto-format",
+        "quality-lint-check",
+        "quality-debug-detection",
+        "quality-type-check"
+      ]
+    },
+    "strict": {
+      "description": "Strict profile - comprehensive security, quality, and rate limiting",
+      "enabledHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "security-secret-detection",
+        "security-suspicious-ops",
+        "security-pre-commit-secrets",
+        "security-large-files",
+        "security-rate-limit",
+        "quality-auto-format",
+        "quality-lint-check",
+        "quality-test-coverage",
+        "quality-debug-detection",
+        "quality-type-check",
+        "quality-schema-validation"
+      ]
+    }
+  },
+  "costTracking": {
+    "enabled": true,
+    "metricsPath": "~/.claude/metrics/costs.jsonl",
+    "models": {
+      "haiku": { "inputCostPer1M": 0.8, "outputCostPer1M": 4.0 },
+      "sonnet": { "inputCostPer1M": 3.0, "outputCostPer1M": 15.0 },
+      "opus": { "inputCostPer1M": 15.0, "outputCostPer1M": 75.0 }
+    }
+  },
+  "agents": {
+    "orchestrator": {
+      "enabled": true,
+      "activeHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "security-rate-limit",
+        "memory-observation-capture",
+        "memory-context-injection",
+        "quality-auto-format",
+        "quality-lint-check"
+      ],
+      "hooks": {
+        "security-dangerous-command": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-sensitive-path": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-rate-limit": {
+          "enabled": true,
+          "priority": 120,
+          "timeout": 1000,
+          "config": {
+            "maxOpsPerMinute": 20
+          }
+        },
+        "memory-observation-capture": {
+          "enabled": true,
+          "priority": 80,
+          "timeout": 2000
+        },
+        "memory-context-injection": {
+          "enabled": true,
+          "priority": 100,
+          "timeout": 3000
+        },
+        "quality-auto-format": {
+          "enabled": true,
+          "priority": 100,
+          "timeout": 5000
+        },
+        "quality-lint-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 3000
+        }
+      }
+    },
+    "architect": {
+      "enabled": true,
+      "activeHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "memory-observation-capture",
+        "quality-auto-format",
+        "quality-lint-check"
+      ],
+      "hooks": {
+        "security-dangerous-command": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-sensitive-path": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "memory-observation-capture": {
+          "enabled": true,
+          "priority": 80,
+          "timeout": 2000
+        },
+        "quality-auto-format": {
+          "enabled": true,
+          "priority": 100,
+          "timeout": 5000
+        },
+        "quality-lint-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 3000
+        }
+      }
+    },
+    "frontend": {
+      "enabled": true,
+      "activeHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "security-secret-detection",
+        "memory-observation-capture",
+        "quality-auto-format",
+        "quality-lint-check",
+        "quality-type-check"
+      ],
+      "hooks": {
+        "security-dangerous-command": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-sensitive-path": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-secret-detection": {
+          "enabled": true,
+          "priority": 140,
+          "timeout": 3000
+        },
+        "memory-observation-capture": {
+          "enabled": true,
+          "priority": 80,
+          "timeout": 2000
+        },
+        "quality-auto-format": {
+          "enabled": true,
+          "priority": 100,
+          "timeout": 5000
+        },
+        "quality-lint-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 3000
+        },
+        "quality-type-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 5000
+        }
+      }
+    },
+    "backend": {
+      "enabled": true,
+      "activeHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "security-secret-detection",
+        "security-large-files",
+        "memory-observation-capture",
+        "memory-task-recording",
+        "quality-auto-format",
+        "quality-lint-check",
+        "quality-type-check",
+        "quality-schema-validation"
+      ],
+      "hooks": {
+        "security-dangerous-command": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-sensitive-path": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-secret-detection": {
+          "enabled": true,
+          "priority": 140,
+          "timeout": 3000
+        },
+        "security-large-files": {
+          "enabled": true,
+          "priority": 130,
+          "timeout": 3000,
+          "config": {
+            "maxSizeMB": 10
+          }
+        },
+        "memory-observation-capture": {
+          "enabled": true,
+          "priority": 80,
+          "timeout": 2000
+        },
+        "memory-task-recording": {
+          "enabled": true,
+          "priority": 90,
+          "timeout": 2000
+        },
+        "quality-auto-format": {
+          "enabled": true,
+          "priority": 100,
+          "timeout": 5000
+        },
+        "quality-lint-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 3000
+        },
+        "quality-type-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 5000
+        },
+        "quality-schema-validation": {
+          "enabled": true,
+          "priority": 85,
+          "timeout": 2000
+        }
+      }
+    },
+    "security": {
+      "enabled": true,
+      "activeHooks": [
+        "security-pre-commit-secrets",
+        "security-large-files",
+        "security-suspicious-ops",
+        "memory-observation-capture",
+        "quality-lint-check"
+      ],
+      "hooks": {
+        "security-pre-commit-secrets": {
+          "enabled": true,
+          "priority": 140,
+          "timeout": 5000
+        },
+        "security-large-files": {
+          "enabled": true,
+          "priority": 130,
+          "timeout": 3000,
+          "config": {
+            "maxSizeMB": 10
+          }
+        },
+        "security-suspicious-ops": {
+          "enabled": true,
+          "priority": 140,
+          "timeout": 2000
+        },
+        "memory-observation-capture": {
+          "enabled": true,
+          "priority": 80,
+          "timeout": 2000
+        },
+        "quality-lint-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 3000
+        }
+      }
+    },
+    "tester": {
+      "enabled": true,
+      "activeHooks": [
+        "security-dangerous-command",
+        "memory-observation-capture",
+        "memory-task-recording",
+        "quality-test-coverage"
+      ],
+      "hooks": {
+        "security-dangerous-command": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "memory-observation-capture": {
+          "enabled": true,
+          "priority": 80,
+          "timeout": 2000
+        },
+        "memory-task-recording": {
+          "enabled": true,
+          "priority": 90,
+          "timeout": 2000
+        },
+        "quality-test-coverage": {
+          "enabled": true,
+          "priority": 90,
+          "timeout": 2000,
+          "config": {
+            "minCoverage": 80
+          }
+        }
+      }
+    },
+    "devops": {
+      "enabled": true,
+      "activeHooks": [
+        "security-dangerous-command",
+        "security-sensitive-path",
+        "security-large-files",
+        "memory-observation-capture",
+        "memory-change-recording",
+        "quality-lint-check"
+      ],
+      "hooks": {
+        "security-dangerous-command": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-sensitive-path": {
+          "enabled": true,
+          "priority": 150,
+          "timeout": 2000
+        },
+        "security-large-files": {
+          "enabled": true,
+          "priority": 130,
+          "timeout": 3000,
+          "config": {
+            "maxSizeMB": 20
+          }
+        },
+        "memory-observation-capture": {
+          "enabled": true,
+          "priority": 80,
+          "timeout": 2000
+        },
+        "memory-change-recording": {
+          "enabled": true,
+          "priority": 85,
+          "timeout": 2000
+        },
+        "quality-lint-check": {
+          "enabled": true,
+          "priority": 95,
+          "timeout": 3000
+        }
+      }
+    }
+  },
+  "eventTypes": {
+    "PreToolUse": {
+      "description": "Before any tool executes",
+      "allowBlock": true,
+      "allowModify": true
+    },
+    "PostToolUse": {
+      "description": "After tool execution",
+      "allowBlock": false,
+      "allowModify": true
+    },
+    "SessionStart": {
+      "description": "Agent session begins",
+      "allowBlock": false,
+      "allowModify": true
+    },
+    "SessionEnd": {
+      "description": "Agent session ends",
+      "allowBlock": false,
+      "allowModify": true
+    },
+    "PreCommit": {
+      "description": "Before code commit",
+      "allowBlock": true,
+      "allowModify": true
+    },
+    "PostCommit": {
+      "description": "After code commit",
+      "allowBlock": false,
+      "allowModify": true
+    },
+    "TaskAssigned": {
+      "description": "When orchestrator assigns a task",
+      "allowBlock": false,
+      "allowModify": true
+    },
+    "TaskCompleted": {
+      "description": "When agent finishes a task",
+      "allowBlock": false,
+      "allowModify": true
+    }
+  }
+}

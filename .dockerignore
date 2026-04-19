@@ -1,0 +1,10 @@
+node_modules
+*/node_modules
+.git
+# Don't ignore .env — router needs router/.env inside container
+# .env files at root level are handled by docker-compose env_file
+*.log
+logs/
+/tmp
+.DS_Store
+*.pid
