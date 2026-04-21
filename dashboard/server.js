@@ -518,7 +518,7 @@ function readFullState() {
       }
       // Include output preview for debugging
       if (lastTask.output) {
-        errorInfo.last_output_preview = lastTask.output.substring(0, 300);
+        errorInfo.last_output_preview = String(lastTask.output).substring(0, 300);
       }
 
       agents[name] = {
