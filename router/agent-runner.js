@@ -520,10 +520,10 @@ class AgentRunner {
 
     // Skill — try marketplace first, fall back to local file
     let skill;
-    const mpAgentId = this._getMarketplaceAgentId(agentName);
-    if (mpAgentId) {
+    const mpConfig = this._getMarketplaceAgentConfig(agentName);
+    if (mpConfig) {
       try {
-        skill = await platformFetchSkill(mpAgentId);
+        skill = await platformFetchSkill(mpConfig);
         if (skill) {
           logger.info('Marketplace skill loaded via API', { agentName, bytes: skill.length });
         }
@@ -547,15 +547,21 @@ class AgentRunner {
   }
 
   /**
-   * Look up a marketplace agent_id for this role from marketplace-agents.json.
-   * Returns the agent_id string or null.
+   * Look up marketplace config for this role from marketplace-agents.json.
+   * Returns { agent_id, company_id } or null.
    */
-  _getMarketplaceAgentId(agentName) {
+  _getMarketplaceAgentConfig(agentName) {
     const configPath = path.join(BASE_DIR, 'marketplace-agents.json');
     try {
       if (fs.existsSync(configPath)) {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        return config.agents?.[agentName]?.agent_id || null;
+        const agentConf = config.agents?.[agentName];
+        if (agentConf?.agent_id) {
+          return {
+            agent_id: agentConf.agent_id,
+            company_id: agentConf.company_id || config.company_id || null,
+          };
+        }
       }
     } catch {
       // Ignore parse errors
