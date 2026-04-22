@@ -9,6 +9,7 @@ import SemanticSearch from '../lib/semantic-search.js';
 import TelegramBot from 'node-telegram-bot-api';
 import {
   fetchSkill as platformFetchSkill,
+  fetchWorkflow as platformFetchWorkflow,
   reportStatus as platformReportStatus,
 } from '../lib/platform-client.js';
 
@@ -512,11 +513,26 @@ class AgentRunner {
    * SKILL.md via the platform API. Falls back to local skills/{agent}/SKILL.md.
    */
   async _buildSystemPrompt(agentName) {
-    const rulesFile = path.join(SKILLS_DIR, 'shared', 'RULES.md');
-    const rules = fs.existsSync(rulesFile) ? fs.readFileSync(rulesFile, 'utf8') : undefined;
-
-    const commFile = path.join(SKILLS_DIR, 'shared', 'COMMUNICATION.md');
-    const communication = fs.existsSync(commFile) ? fs.readFileSync(commFile, 'utf8') : undefined;
+    // Workflow (rules + communication) — try platform first, fall back to local files
+    let rules, communication;
+    try {
+      const platformWorkflow = await platformFetchWorkflow();
+      if (platformWorkflow) {
+        rules = platformWorkflow.rules_content || undefined;
+        communication = platformWorkflow.communication_content || undefined;
+        logger.info('Platform workflow loaded', { agentName, hasRules: !!rules, hasComm: !!communication });
+      }
+    } catch {
+      // platform-client never throws, but guard anyway
+    }
+    if (!rules) {
+      const rulesFile = path.join(SKILLS_DIR, 'shared', 'RULES.md');
+      rules = fs.existsSync(rulesFile) ? fs.readFileSync(rulesFile, 'utf8') : undefined;
+    }
+    if (!communication) {
+      const commFile = path.join(SKILLS_DIR, 'shared', 'COMMUNICATION.md');
+      communication = fs.existsSync(commFile) ? fs.readFileSync(commFile, 'utf8') : undefined;
+    }
 
     // Skill — try marketplace first, fall back to local file
     let skill;
