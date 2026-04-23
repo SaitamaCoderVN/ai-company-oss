@@ -549,19 +549,26 @@ async function handleUserMessage(msg) {
       `Max ${statusInfo.maxCapacity - statusInfo.activeCount} agents can start now (${statusInfo.activeCount} already active).`,
     ].join('\n');
 
-    // Enqueue orchestrator task via pg-boss, fall back to direct agent start
+    // Enqueue orchestrator task — use pg-boss if ready, otherwise direct dispatch
     let started = false;
-    try {
-      const { scheduleTask } = await import('../lib/queue.js');
-      await scheduleTask('orchestrator', {
-        taskId,
-        input: orchestratorPrompt,
-        chatId: chat.id,
-        messageId: message_id,
-      });
-      started = true;
-    } catch {
-      // pg-boss not available — fall back to direct agent start
+    if (queueReady) {
+      try {
+        const { scheduleTask } = await import('../lib/queue.js');
+        await scheduleTask('orchestrator', {
+          taskId,
+          input: orchestratorPrompt,
+          chatId: chat.id,
+          messageId: message_id,
+        });
+        started = true;
+        logger.info('Task enqueued via pg-boss', { taskId });
+      } catch (err) {
+        logger.warn('pg-boss enqueue failed, falling back to direct dispatch', { error: err.message });
+        started = await AgentManager.startAgent('orchestrator', taskId, orchestratorPrompt);
+      }
+    } else {
+      // Queue not ready — dispatch directly
+      logger.info('Queue not ready, using direct agent dispatch', { taskId });
       started = await AgentManager.startAgent('orchestrator', taskId, orchestratorPrompt);
     }
 
@@ -872,16 +879,35 @@ function initWebSocketServer() {
           return res.status(400).json({ error: 'agent, task_id, prompt required' });
         }
 
-        const { scheduleTask } = await import('../lib/queue.js');
-        await scheduleTask(agent, {
-          taskId: task_id,
-          input: prompt,
-          context: context || null,
-          chatId: chatId || null,
-          dependsOn: depends_on || [],
-        });
+        let fullPrompt = prompt;
+        if (context && context.length < 500) {
+          fullPrompt = `## Context\n${context}\n\n## Task\n${prompt}`;
+        }
 
-        logger.info('Sub-task dispatched via /dispatch', { agent, task_id });
+        // Try pg-boss first, fall back to direct dispatch
+        let dispatched = false;
+        if (queueReady) {
+          try {
+            const { scheduleTask } = await import('../lib/queue.js');
+            await scheduleTask(agent, {
+              taskId: task_id,
+              input: prompt,
+              context: context || null,
+              chatId: chatId || null,
+              dependsOn: depends_on || [],
+            });
+            dispatched = true;
+            logger.info('Sub-task dispatched via pg-boss', { agent, task_id });
+          } catch (err) {
+            logger.warn('pg-boss dispatch failed, falling back to direct', { agent, error: err.message });
+          }
+        }
+
+        if (!dispatched) {
+          await AgentManager.startAgent(agent, task_id, fullPrompt);
+          logger.info('Sub-task dispatched directly', { agent, task_id });
+        }
+
         res.json({ ok: true, task_id });
       } catch (err) {
         logger.error('Dispatch endpoint error', { error: err.message });
@@ -1020,6 +1046,9 @@ async function registerQueueHandlers() {
 // MAIN
 // ============================================================================
 
+// Flag: true once pg-boss queue + handlers are fully ready
+let queueReady = false;
+
 async function main() {
   try {
     logger.success('========================================');
@@ -1032,7 +1061,22 @@ async function main() {
     // Initialize directories
     initDirectories();
 
-    // Initialize bots
+    // Start pg-boss queue BEFORE bots (prevents race condition where
+    // a Telegram message arrives before workers are listening)
+    if (process.env.DATABASE_URL) {
+      try {
+        await startQueue(process.env.DATABASE_URL);
+        await registerQueueHandlers();
+        queueReady = true;
+        logger.success('pg-boss queue started and handlers registered');
+      } catch (err) {
+        logger.error('pg-boss queue failed to start — will use direct dispatch', { error: err.message });
+      }
+    } else {
+      logger.warn('DATABASE_URL not set — using direct agent dispatch');
+    }
+
+    // Initialize bots (starts Telegram polling — must happen AFTER queue is ready)
     await initBots();
 
     // Initialize skill handler
@@ -1041,19 +1085,6 @@ async function main() {
 
     // Start task watching
     await startTaskWatching();
-
-    // Start pg-boss queue (primary task dispatch path)
-    if (process.env.DATABASE_URL) {
-      try {
-        await startQueue(process.env.DATABASE_URL);
-        await registerQueueHandlers();
-        logger.success('pg-boss queue started');
-      } catch (err) {
-        logger.error('pg-boss queue failed to start', { error: err.message });
-      }
-    } else {
-      logger.warn('DATABASE_URL not set — pg-boss queue disabled, task dispatch will not work');
-    }
 
     // Initialize WebSocket server
     initWebSocketServer();
@@ -1066,6 +1097,7 @@ async function main() {
     logger.success('Router fully initialized and ready');
     logger.success(`Max concurrent agents: ${MAX_WORK_AGENTS}`);
     logger.success(`Telegram group: ${TELEGRAM_GROUP_ID}`);
+    logger.success(`Queue: ${queueReady ? 'pg-boss' : 'direct dispatch'}`);
     logger.success(`Dashboard port: ${DASHBOARD_WS_PORT}`);
     logger.success('========================================');
   } catch (error) {
