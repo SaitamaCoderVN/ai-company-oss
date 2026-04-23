@@ -495,49 +495,89 @@ function readFullState() {
     }
   }
 
-  // Merge docker stats, memory stats, and task error info into agent data
+  // Build agent source: prefer Supabase data, fall back to local process + task data
+  const ALL_AGENTS = ['orchestrator', 'architect', 'design', 'frontend', 'backend',
+    'smartcontract', 'researcher', 'tester', 'security', 'devops'];
+
+  // Base agent data: from Supabase if available, otherwise from docker/process stats
+  const agentSource = (agentStatus && agentStatus.agents && Object.keys(agentStatus.agents).length > 0)
+    ? agentStatus.agents
+    : null;
+
   const agents = {};
-  if (agentStatus && agentStatus.agents) {
-    for (const [name, data] of Object.entries(agentStatus.agents)) {
-      const docker = dockerStats[name] || {};
-      const memStats = memoryStats[name] || {};
-      const lastTask = agentLastTask[name] || {};
+  let activeCount = 0;
 
-      // Include error info from the agent's most recent task
-      const errorInfo = {};
-      if (lastTask.status === 'error' || lastTask.error) {
-        errorInfo.error = lastTask.error || null;
-        errorInfo.last_error = lastTask.error || null;
-        errorInfo.error_type = lastTask.error_type || null;
-        errorInfo.last_task_id = lastTask.id || lastTask.task_id || null;
-        errorInfo.last_task_status = lastTask.status || null;
-        errorInfo.completedAt = lastTask.completedAt || null;
-        if (data.status === 'idle' && lastTask.status === 'error') {
-          errorInfo.status = 'error';
-        }
-      }
-      // Include output preview for debugging
-      if (lastTask.output) {
-        errorInfo.last_output_preview = String(lastTask.output).substring(0, 300);
-      }
+  for (const name of ALL_AGENTS) {
+    const supaData = agentSource ? agentSource[name] : null;
+    const docker = dockerStats[name] || {};
+    const memStats = memoryStats[name] || {};
+    const lastTask = agentLastTask[name] || {};
 
-      agents[name] = {
-        ...data,
-        ...errorInfo,
-        docker_mem: docker.memUsage || null,
-        docker_mem_percent: docker.memPercent || 0,
-        docker_cpu_percent: docker.cpuPercent || 0,
-        is_container_running: true, // All-in-One: always running (shared container)
-        memory_stats: memStats,
-        cost_summary: costSummary.by_agent[name] || { cost: 0, tokens: 0 }
-      };
+    // Determine status: Supabase > running process > task file > idle
+    let status = 'idle';
+    let task = null;
+
+    if (supaData) {
+      status = supaData.status || 'idle';
+      task = supaData.task || null;
+    } else if (docker.cpuPercent > 0 || (docker.memPercent > 0 && !docker.ready)) {
+      // Agent has a running Claude process
+      status = 'working';
+      task = lastTask.id || lastTask.task_id || null;
+    } else if (lastTask.status === 'in_progress' || lastTask.status === 'active') {
+      status = 'working';
+      task = lastTask.id || lastTask.task_id || null;
     }
+
+    if (status === 'working') activeCount++;
+
+    // Include error info from the agent's most recent task
+    const errorInfo = {};
+    if (lastTask.status === 'error' || lastTask.error) {
+      errorInfo.error = lastTask.error || null;
+      errorInfo.last_error = lastTask.error || null;
+      errorInfo.error_type = lastTask.error_type || null;
+      errorInfo.last_task_id = lastTask.id || lastTask.task_id || null;
+      errorInfo.last_task_status = lastTask.status || null;
+      errorInfo.completedAt = lastTask.completedAt || null;
+      if (status === 'idle' && lastTask.status === 'error') {
+        status = 'error';
+      }
+    }
+    // Include output preview for debugging
+    if (lastTask.output) {
+      errorInfo.last_output_preview = String(lastTask.output).substring(0, 300);
+    }
+
+    agents[name] = {
+      status,
+      task,
+      started_at: supaData?.started_at || lastTask.updatedAt || null,
+      pid: supaData?.pid || null,
+      ...errorInfo,
+      docker_mem: docker.memUsage || null,
+      docker_mem_percent: docker.memPercent || 0,
+      docker_cpu_percent: docker.cpuPercent || 0,
+      is_container_running: true,
+      memory_stats: memStats,
+      cost_summary: costSummary.by_agent[name] || { cost: 0, tokens: 0 }
+    };
   }
+
+  const systemStatus = agentStatus?.system || {
+    max_active: 3,
+    total_agents: 10,
+    active_count: activeCount,
+    status: activeCount > 0 ? 'working' : 'idle',
+  };
+  // Always update active count from local data
+  systemStatus.active_count = activeCount;
+  if (activeCount > 0) systemStatus.status = 'working';
 
   return {
     type: 'full_state',
     timestamp: Date.now(),
-    system: agentStatus?.system || { max_active: 3, total_agents: 10, status: 'initialized' },
+    system: systemStatus,
     agents,
     pipeline,
     skill_requests: skillQueue,
