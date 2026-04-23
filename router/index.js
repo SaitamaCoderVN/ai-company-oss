@@ -1027,17 +1027,26 @@ async function registerQueueHandlers() {
   const { onTask } = await import('../lib/queue.js');
 
   for (const role of AGENT_ROLES) {
-    await onTask(role, async (job) => {
-      const { taskId, input, chatId, messageId, context, dependsOn } = job.data;
-      logger.info('pg-boss job received', { role, taskId, jobId: job.id });
+    await onTask(role, async (jobs) => {
+      // pg-boss v10+ passes an array of jobs to the handler
+      const jobList = Array.isArray(jobs) ? jobs : [jobs];
 
-      let fullPrompt = input || '';
-      if (context && context.length < 500) {
-        fullPrompt = `## Context\n${context}\n\n## Task\n${input}`;
+      for (const job of jobList) {
+        try {
+          const { taskId, input, chatId, messageId, context, dependsOn } = job.data;
+          logger.info('pg-boss job received', { role, taskId, jobId: job.id });
+
+          let fullPrompt = input || '';
+          if (context && context.length < 500) {
+            fullPrompt = `## Context\n${context}\n\n## Task\n${input}`;
+          }
+
+          // Start the agent via AgentManager
+          await AgentManager.startAgent(role, taskId, fullPrompt);
+        } catch (err) {
+          logger.error('pg-boss job handler error', { role, jobId: job.id, error: err.message });
+        }
       }
-
-      // Start the agent via AgentManager
-      await AgentManager.startAgent(role, taskId, fullPrompt);
     });
   }
 }
