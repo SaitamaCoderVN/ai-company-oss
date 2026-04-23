@@ -72,7 +72,7 @@
         <div class="hud-item" id="hud-error-wrap" style="display:none"><span class="hud-label" style="color:#F87171">ERRORS</span><span class="hud-val hud-errors" id="hud-errors">0</span></div>
       </div>
       <div class="hud-right">
-        <div class="hud-item"><span class="hud-label">DOCKER</span><span class="hud-val" id="hud-docker" style="color:#F87171">OFF</span></div>
+        <div class="hud-item"><span class="hud-label">ENGINE</span><span class="hud-val" id="hud-docker" style="color:#FACC15">IDLE</span></div>
         <div class="hud-item"><span class="hud-label">UPTIME</span><span class="hud-val" id="hud-uptime">00:00:00</span></div>
       </div>
     </div>
@@ -1414,10 +1414,14 @@ function connectWS() {
             .filter(t => t.status === 'error' || t.error);
           document.getElementById('hud-tasks').textContent = total;
         }
-        // Docker
+        // Engine status — show ACTIVE when agents are working, IDLE when connected but no work, OFF if disconnected
+        const hudDocker = document.getElementById('hud-docker');
         if (data.docker_available) {
-          document.getElementById('hud-docker').textContent = 'ON';
-          document.getElementById('hud-docker').style.color = '#4ADE80';
+          hudDocker.textContent = 'ACTIVE';
+          hudDocker.style.color = '#4ADE80';
+        } else {
+          hudDocker.textContent = 'IDLE';
+          hudDocker.style.color = '#FACC15';
         }
         updateAgentList();
         updateDetailPanel();
